@@ -13,7 +13,6 @@ def extract_code_only(response_text):
     Removes triple backticks and optional 'python' tag.
     """
     if "```" in response_text:
-        # Remove markdown-style formatting
         code = response_text.split("```")[1]
         code = code.replace("python", "").strip()
     else:
@@ -51,12 +50,12 @@ You are a highly experienced Manim Community Edition (v0.19+) developer.
 Given the following user request, generate a **single, complete, executable Python Manim script**.
 
 ### INSTRUCTIONS:
-- ✅ Output **only valid Python code**, no markdown, no text.
-- ✅ Always include required imports, like `from manim import *`.
-- ✅ If using constants like `DEG`, `PI`, or `TAU`, **import or define them explicitly** (e.g., `DEG = PI / 180`).
-- ✅ Avoid guessing logic using things like `str(obj.color)` — use direct object references (e.g., known variable names).
-- ✅ Ensure every variable is defined before it is used.
-- ✅ The final script should run successfully with: `manim -pql file.py SceneName`.
+- Output **only valid Python code**, no markdown, no text.
+- Always include required imports, like `from manim import *`.
+- If using constants like `DEG`, `PI`, or `TAU`, **import or define them explicitly** (e.g., `DEG = PI / 180`).
+- Avoid guessing logic using things like `str(obj.color)` — use direct object references (e.g., known variable names).
+- Ensure every variable is defined before it is used.
+- The final script should run successfully with: `manim -pql file.py SceneName`.
 
 ### USER REQUEST:
 {query}
@@ -71,11 +70,9 @@ Given the following user request, generate a **single, complete, executable Pyth
         api_response = response.json()
         raw_code = api_response['choices'][0]['message']['content']
 
-        # Clean and patch code
         clean_code = extract_code_only(raw_code)
         clean_code = auto_patch_manim_code(clean_code)
 
-        # Save to file
         output_filename = "manim_code.py"
         with open(output_filename, 'w') as f:
             f.write(clean_code)
