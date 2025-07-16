@@ -7,6 +7,7 @@ load_dotenv()
 api_key = os.getenv("OPENROUTER_API_KEY")
 app = Flask(__name__)
 
+
 def extract_code_only(response_text):
     """
     Extract clean Python code from markdown-style response.
