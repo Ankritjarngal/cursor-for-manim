@@ -112,21 +112,18 @@ class MainScene(Scene):
             f.write(clean_code)
         
         print(f"[{job_id}] Running Manim...")
-        cmd = [
-    "timeout", "120",
-    "manim",
-    str(work_path),
-    scene_name,
-    "-qm",               # Correct medium quality flag
-    "--format", "mp4",   # Correct format
-    "--output_file", f"{job_id}.mp4"
-]
-
-
-
         
-
-
+        # Fixed command - use proper Manim command structure
+        cmd = [
+            "timeout", "120",
+            "manim", "render",
+            str(work_path),
+            scene_name,
+            "-q", "m",  # Medium quality (separate flags)
+            "--format", "mp4",
+            "--output_file", f"{job_id}.mp4"
+        ]
+        
         result = subprocess.run(
             cmd,
             cwd=str(OUTPUT_DIR),
