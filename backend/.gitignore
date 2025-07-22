@@ -1,19 +1,36 @@
+# Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
+
+# Distribution / packaging
+build/
+dist/
 *.egg
 *.egg-info/
-dist/
-build/
-.env
 
-manim_code.py
+# Logs
+*.log
+
+# Environments
 venv/
 env/
 
-media/
-*.log
+# Secret files
+.env
+.env.*
 
+# Manim output
+media/
+
+# IDEs and editors
 .vscode/
 .idea/
 *.swp
 .DS_Store
+
+# Docker socket/PID files (optional)
+*.pid
+*.sock
+
+# Generated files (if applicable)
+manim_code.py
