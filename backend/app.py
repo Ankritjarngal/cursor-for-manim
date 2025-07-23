@@ -4,9 +4,7 @@ import json
 import os
 import subprocess
 import re
-import tempfile
 import uuid
-import shutil
 from pathlib import Path
 from dotenv import load_dotenv
 
@@ -15,7 +13,7 @@ api_key = os.getenv("OPENROUTER_API_KEY")
 
 app = Flask(__name__)
 
-# Create directories
+# Directories
 WORK_DIR = Path("/app/work")
 OUTPUT_DIR = Path("/app/output")
 WORK_DIR.mkdir(exist_ok=True)
@@ -24,7 +22,7 @@ OUTPUT_DIR.mkdir(exist_ok=True)
 def extract_code_only(response_text):
     if "```" in response_text:
         parts = response_text.split("```")
-        for part in parts[1::2]:  # Get odd indices (code blocks)
+        for part in parts[1::2]:
             code = part.replace("python", "").strip()
             if code and "class" in code and "Scene" in code:
                 return code
@@ -52,7 +50,7 @@ def render_animation():
         
         query = data.get('query')
         job_id = str(uuid.uuid4())[:8]
-        
+
         print(f"[{job_id}] Processing query: {query}")
         
         # Call OpenRouter API
@@ -64,7 +62,7 @@ def render_animation():
                 "Content-Type": "application/json",
             },
             json={
-                "model": "moonshotai/kimi-k2:free",
+                "model": "qwen/qwen3-235b-a22b-07-25:free",
                 "messages": [{
                     "role": "user",
                     "content": f"""
@@ -78,14 +76,6 @@ Requirements:
 - No external dependencies
 - No deprecated methods
 - Output ONLY Python code, no explanations
-
-Example format:
-from manim import *
-
-class MainScene(Scene):
-    def construct(self):
-        # Your animation code here
-        self.wait()
 """
                 }]
             },
@@ -93,75 +83,80 @@ class MainScene(Scene):
         )
         
         if response.status_code != 200:
-            return jsonify({"error": f"API error: {response.status_code}"}), 500
-            
+            print(f"[{job_id}] OpenRouter Error: {response.status_code} - {response.text}")
+            return jsonify({
+                "error": f"API error: {response.status_code}",
+                "details": response.text
+            }), response.status_code
+        
         api_response = response.json()
         raw_code = api_response['choices'][0]['message']['content']
         
-        # Clean and prepare code
         clean_code = extract_code_only(raw_code)
         clean_code = auto_patch_manim_code(clean_code)
         scene_name = extract_scene_name(clean_code)
         
         print(f"[{job_id}] Scene name: {scene_name}")
         
-        # Create temporary files
         work_path = WORK_DIR / f"scene_{job_id}.py"
-        
         with open(work_path, 'w') as f:
             f.write(clean_code)
         
         print(f"[{job_id}] Running Manim...")
-        
-        # Fixed command - use proper Manim command structure
         cmd = [
             "timeout", "120",
-            "manim", "render",
+            "manim",
             str(work_path),
             scene_name,
-            "-q", "m",  # Medium quality (separate flags)
-            "--format", "mp4",
-            "--output_file", f"{job_id}.mp4"
+            "-q", "m",
+            "-o", f"{job_id}.mp4"
         ]
-        
+        print(f"[{job_id}] Command: {' '.join(cmd)}")
+
         result = subprocess.run(
             cmd,
             cwd=str(OUTPUT_DIR),
             capture_output=True,
             text=True,
-            timeout=130  # Slightly longer than the timeout command
+            timeout=130
         )
-        
-        # Clean up source file
+
+        print(f"[{job_id}] STDOUT:\n{result.stdout}")
+        print(f"[{job_id}] STDERR:\n{result.stderr}")
+
         work_path.unlink(missing_ok=True)
-        
+
         if result.returncode != 0:
-            print(f"[{job_id}] Manim error: {result.stderr}")
             return jsonify({
                 "error": "Manim rendering failed",
                 "details": result.stderr,
                 "code": clean_code
             }), 500
+
+        # Look for the file in the Manim output directory structure
+        output_file = OUTPUT_DIR / f"media/videos/scene_{job_id}/720p30/{job_id}.mp4"
+        print(f"[{job_id}] Looking for output: {output_file}")
         
-        # Find output file
-        output_file = OUTPUT_DIR / f"{job_id}.mp4"
         if not output_file.exists():
-            # Try to find any mp4 file created
-            mp4_files = list(OUTPUT_DIR.glob("*.mp4"))
-            if mp4_files:
-                output_file = mp4_files[-1]  # Get the most recent one
+            # Fallback: search for any mp4 file in the expected directory structure
+            video_dir = OUTPUT_DIR / f"media/videos/scene_{job_id}/720p30"
+            if video_dir.exists():
+                mp4_files = list(video_dir.glob("*.mp4"))
+                if mp4_files:
+                    output_file = mp4_files[-1]
+                else:
+                    return jsonify({"error": "No output file generated"}), 500
             else:
-                return jsonify({"error": "No output file generated"}), 500
-        
-        print(f"[{job_id}] Success! Output: {output_file}")
-        
+                return jsonify({"error": "No output directory created"}), 500
+
         return jsonify({
             "success": True,
             "job_id": job_id,
             "download_url": f"/download/{job_id}",
+            "file_path": str(output_file),
             "message": "Animation rendered successfully"
         }), 200
-        
+
     except subprocess.TimeoutExpired:
         return jsonify({"error": "Rendering timeout (2 minutes)"}), 408
     except Exception as e:
@@ -171,11 +166,22 @@ class MainScene(Scene):
 @app.route('/download/<job_id>', methods=['GET'])
 def download_file(job_id):
     try:
-        output_file = OUTPUT_DIR / f"{job_id}.mp4"
-        if output_file.exists():
-            return send_file(str(output_file), as_attachment=True)
-        else:
-            return jsonify({"error": "File not found"}), 404
+        # Look for the file in the Manim output directory structure
+        output_file = OUTPUT_DIR / f"media/videos/scene_{job_id}/720p30/{job_id}.mp4"
+        
+        if not output_file.exists():
+            # Fallback: search for any mp4 file in the expected directory structure
+            video_dir = OUTPUT_DIR / f"media/videos/scene_{job_id}/720p30"
+            if video_dir.exists():
+                mp4_files = list(video_dir.glob("*.mp4"))
+                if mp4_files:
+                    output_file = mp4_files[-1]
+                else:
+                    return jsonify({"error": "File not found"}), 404
+            else:
+                return jsonify({"error": "File not found"}), 404
+        
+        return send_file(str(output_file), as_attachment=True)
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 

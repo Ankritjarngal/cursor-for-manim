@@ -21,6 +21,7 @@ env/
 
 # Manim output
 media/
+output/
 
 # IDEs and editors
 .vscode/

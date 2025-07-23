@@ -1,4 +1,3 @@
-# Dockerfile
 FROM python:3.11-slim
 
 # Install system dependencies
@@ -11,24 +10,21 @@ RUN apt-get update && apt-get install -y \
     gcc \
     g++ \
     libffi-dev \
+    git \
     && rm -rf /var/lib/apt/lists/*
 
 # Set working directory
 WORKDIR /app
 
-# Copy requirements and install Python dependencies
+# Copy requirements and install dependencies
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Create directories
+# Create necessary directories
 RUN mkdir -p /app/work /app/output
 
-# Copy application code
-COPY app.py .
-COPY .env .
+# Copy app code
+COPY . .
 
-# Expose port
 EXPOSE 5000
-
-# Run the application
 CMD ["python", "app.py"]
