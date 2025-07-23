@@ -1,6 +1,6 @@
 FROM python:3.11-slim
 
-# Install system dependencies
+# Install system dependencies including LaTeX
 RUN apt-get update && apt-get install -y \
     ffmpeg \
     libcairo2-dev \
@@ -11,19 +11,27 @@ RUN apt-get update && apt-get install -y \
     g++ \
     libffi-dev \
     git \
-    && rm -rf /var/lib/apt/lists/*
+    texlive-latex-base \
+    texlive-latex-extra \
+    texlive-fonts-recommended \
+    texlive-fonts-extra \
+    texlive-science \
+    dvipng \
+    dvisvgm \
+    ghostscript \
+    && apt-get clean && rm -rf /var/lib/apt/lists/*
 
 # Set working directory
 WORKDIR /app
 
-# Copy requirements and install dependencies
+# Copy requirements and install Python dependencies
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Create necessary directories
 RUN mkdir -p /app/work /app/output
 
-# Copy app code
+# Copy application code
 COPY . .
 
 EXPOSE 5000

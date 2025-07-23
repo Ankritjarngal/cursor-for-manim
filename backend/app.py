@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify, send_file
+from flask import Flask, request, jsonify, send_file ,send_from_directory
 import requests
 import json
 import os
@@ -7,12 +7,12 @@ import re
 import uuid
 from pathlib import Path
 from dotenv import load_dotenv
-
+from flask_cors import CORS  # <--- import it
 load_dotenv()
 api_key = os.getenv("OPENROUTER_API_KEY")
 
 app = Flask(__name__)
-
+CORS(app)  # <--- enable CORS for all routes
 # Directories
 WORK_DIR = Path("/app/work")
 OUTPUT_DIR = Path("/app/output")
@@ -184,6 +184,9 @@ def download_file(job_id):
         return send_file(str(output_file), as_attachment=True)
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+@app.route('/media/<path:filename>')
+def serve_video(filename):
+    return send_from_directory('/app/output', filename)
 
 if __name__ == '__main__':
     print("Starting Manim API server...")
