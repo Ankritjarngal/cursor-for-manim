@@ -62,7 +62,7 @@ def render_animation():
                 "Content-Type": "application/json",
             },
             json={
-                "model": "qwen/qwen3-235b-a22b-07-25:free",
+                "model": "deepseek/deepseek-chat-v3-0324:free",
                 "messages": [{
                     "role": "user",
                     "content": f"""
