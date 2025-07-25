@@ -69,7 +69,7 @@ def render_animation():
 Create a complete Manim Community Edition script for: {query}
 
 Requirements:
-- Use only "from manim import *"
+- Use only  "from manim import *"
 - Create a single Scene class
 - Use only basic Manim objects (Square, Circle, Text, etc.)
 - Keep animations simple (Create, FadeIn, FadeOut, Transform)
